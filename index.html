@@ -1,9 +1,455 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>HEY BABES</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Gusano 💗</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #ffd6e7, #e8d9ff);
+    font-family: Arial, sans-serif;
+    color: #54204a;
+}
+
+.game {
+    background: #ffffffcc;
+    padding: 24px;
+    border-radius: 24px;
+    text-align: center;
+    box-shadow: 0 15px 45px #8b4f7a33;
+}
+
+h1 {
+    margin-bottom: 8px;
+    font-size: 32px;
+}
+
+.info {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 4px 14px;
+    font-weight: bold;
+}
+
+canvas {
+    display: block;
+    background: #fff7fb;
+    border: 4px solid #f08abb;
+    border-radius: 14px;
+}
+
+button {
+    margin-top: 16px;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 22px;
+    background: #ef72ad;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    transform: scale(1.04);
+}
+
+p {
+    margin-top: 10px;
+    font-size: 14px;
+    opacity: 0.8;
+}
+</style>
 </head>
+
 <body>
-    <h1>HEY BABES LOVE YOU ❤️</h1>
+
+<div class="game">
+
+    <h1>🐛 Gusano 💗</h1>
+
+    <div class="info">
+        <span>Puntos: <b id="score">0</b></span>
+        <span>Récord: <b id="best">0</b></span>
+    </div>
+
+    <canvas id="game" width="400" height="400"></canvas>
+
+    <button id="restart">
+        Jugar / Reiniciar
+    </button>
+
+    <p>
+        Usa las flechas ⬆️ ⬇️ ⬅️ ➡️ para mover al gusano
+    </p>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const size = 20;
+const cells = 20;
+
+let worm;
+let food;
+let dir;
+let nextDir;
+
+let score = 0;
+
+let best = Number(
+    localStorage.getItem("gusanoBest") || 0
+);
+
+let running = false;
+let timer;
+
+const scoreEl = document.getElementById("score");
+const bestEl = document.getElementById("best");
+const restart = document.getElementById("restart");
+
+bestEl.textContent = best;
+
+
+// INICIAR / REINICIAR
+function reset() {
+
+    clearInterval(timer);
+
+    worm = [
+        { x: 10, y: 10 },
+        { x: 9, y: 10 },
+        { x: 8, y: 10 }
+    ];
+
+    dir = {
+        x: 1,
+        y: 0
+    };
+
+    nextDir = {
+        x: 1,
+        y: 0
+    };
+
+    score = 0;
+
+    scoreEl.textContent = score;
+
+    placeFood();
+
+    draw();
+
+    running = true;
+
+    timer = setInterval(tick, 110);
+}
+
+
+// CREAR COMIDA
+function placeFood() {
+
+    do {
+
+        food = {
+            x: Math.floor(Math.random() * cells),
+            y: Math.floor(Math.random() * cells)
+        };
+
+    } while (
+        worm &&
+        worm.some(
+            p =>
+                p.x === food.x &&
+                p.y === food.y
+        )
+    );
+}
+
+
+// ACTUALIZAR JUEGO
+function tick() {
+
+    dir = nextDir;
+
+    const head = {
+        x: worm[0].x + dir.x,
+        y: worm[0].y + dir.y
+    };
+
+
+    // CHOCAR CON PARED O CON EL CUERPO
+    if (
+        head.x < 0 ||
+        head.x >= cells ||
+        head.y < 0 ||
+        head.y >= cells ||
+
+        worm.some(
+            p =>
+                p.x === head.x &&
+                p.y === head.y
+        )
+    ) {
+
+        running = false;
+
+        clearInterval(timer);
+
+        draw(true);
+
+        return;
+    }
+
+
+    // MOVER CABEZA
+    worm.unshift(head);
+
+
+    // COMER
+    if (
+        head.x === food.x &&
+        head.y === food.y
+    ) {
+
+        score++;
+
+        scoreEl.textContent = score;
+
+
+        // NUEVO RÉCORD
+        if (score > best) {
+
+            best = score;
+
+            bestEl.textContent = best;
+
+            localStorage.setItem(
+                "gusanoBest",
+                best
+            );
+        }
+
+        placeFood();
+
+    } else {
+
+        // QUITAR COLA
+        worm.pop();
+    }
+
+
+    draw();
+}
+
+
+// DIBUJAR
+function draw(gameOver = false) {
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    // CUADRÍCULA
+    ctx.strokeStyle = "#f8dce9";
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i <= cells; i++) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(i * size, 0);
+        ctx.lineTo(i * size, 400);
+
+        ctx.stroke();
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(0, i * size);
+        ctx.lineTo(400, i * size);
+
+        ctx.stroke();
+    }
+
+
+    // COMIDA ❤️
+    ctx.fillStyle = "#ff6fae";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        food.x * size + 10,
+        food.y * size + 10,
+        7,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    // GUSANO
+    worm.forEach((p, i) => {
+
+        ctx.fillStyle =
+            i === 0
+                ? "#b84fd0"
+                : "#d96bc5";
+
+        ctx.beginPath();
+
+        ctx.roundRect(
+            p.x * size + 2,
+            p.y * size + 2,
+            16,
+            16,
+            6
+        );
+
+        ctx.fill();
+    });
+
+
+    // GAME OVER
+    if (gameOver) {
+
+        ctx.fillStyle = "#ffffffdd";
+
+        ctx.fillRect(
+            0,
+            0,
+            400,
+            400
+        );
+
+        ctx.fillStyle = "#54204a";
+
+        ctx.textAlign = "center";
+
+        ctx.font = "bold 30px Arial";
+
+        ctx.fillText(
+            "¡Game Over! 💗",
+            200,
+            185
+        );
+
+        ctx.font = "18px Arial";
+
+        ctx.fillText(
+            "Puntos: " + score,
+            200,
+            220
+        );
+
+        ctx.font = "15px Arial";
+
+        ctx.fillText(
+            "Pulsa Reiniciar para jugar otra vez",
+            200,
+            250
+        );
+    }
+}
+
+
+// CONTROLES
+document.addEventListener(
+    "keydown",
+    e => {
+
+        if (
+            e.key === "ArrowUp" &&
+            dir.y !== 1
+        ) {
+
+            nextDir = {
+                x: 0,
+                y: -1
+            };
+        }
+
+
+        if (
+            e.key === "ArrowDown" &&
+            dir.y !== -1
+        ) {
+
+            nextDir = {
+                x: 0,
+                y: 1
+            };
+        }
+
+
+        if (
+            e.key === "ArrowLeft" &&
+            dir.x !== 1
+        ) {
+
+            nextDir = {
+                x: -1,
+                y: 0
+            };
+        }
+
+
+        if (
+            e.key === "ArrowRight" &&
+            dir.x !== -1
+        ) {
+
+            nextDir = {
+                x: 1,
+                y: 0
+            };
+        }
+
+
+        if (
+            [
+                "ArrowUp",
+                "ArrowDown",
+                "ArrowLeft",
+                "ArrowRight"
+            ].includes(e.key)
+        ) {
+
+            e.preventDefault();
+        }
+
+    }
+);
+
+
+// BOTÓN
+restart.onclick = reset;
+
+
+// EMPEZAR
+reset();
+
+</script>
+
 </body>
 </html>
